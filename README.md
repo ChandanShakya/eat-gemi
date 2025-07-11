@@ -1,11 +1,12 @@
-
 # EatGemi 🍽️
+
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/ChandanShakya/eat-gemi)
 
 AI-Powered Restaurant Finder — Vue 3 PWA + Laravel API with Google Gemini AI integration for smart restaurant discovery, menu access, and offline support.
 
 ---
 
-## 🚀 Project Overview
+## 🚀 Project Overview 
 
 EatGemi is a modern, mobile-first PWA for discovering restaurants using AI. It combines Vue 3, Vite, Laravel, Google Gemini AI, and Google Maps/Places APIs to deliver smart recommendations, menu previews, and visit tracking — all with offline capabilities.
 
