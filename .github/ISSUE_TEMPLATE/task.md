@@ -1,6 +1,6 @@
 ---
 name: Task
-description: Track a specific task or chore
+about: Track a specific task or chore
 labels: task
 ---
 
