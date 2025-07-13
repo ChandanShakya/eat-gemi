@@ -180,4 +180,4 @@ MIT — see [LICENSE](LICENSE)
 
 ## 📚 Wiki
 
-See [EatGemi Wiki](./wiki/Home.md) for detailed documentation, architecture, API usage, troubleshooting, and more.
+See [EatGemi Wiki](./wiki/) for detailed documentation, architecture, API usage, troubleshooting, and more.
