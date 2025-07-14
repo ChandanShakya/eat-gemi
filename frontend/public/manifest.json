@@ -1,0 +1,28 @@
+{
+  "name": "EatGemi",
+  "short_name": "EatGemi",
+  "description": "AI-powered restaurant discovery with offline capabilities",
+  "theme_color": "#10b981",
+  "background_color": "#ffffff",
+  "display": "standalone",
+  "scope": "/",
+  "start_url": "/",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ],
+  "categories": ["food", "navigation", "travel"],
+  "lang": "en",
+  "dir": "ltr"
+}

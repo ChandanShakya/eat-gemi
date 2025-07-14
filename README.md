@@ -96,17 +96,30 @@ Schema::create('visited_places', function (Blueprint $table) {
 
 ## ⚡ Setup Instructions
 
+### Prerequisites
+- Node.js 18+ and npm
+- PHP 8.2+ and Composer
+- MySQL 8.0+
+- Google Cloud Platform account (for Gemini & Maps API keys)
+
 ### Backend (Laravel)
 ```bash
+cd backend
 composer install
+cp .env.example .env
 php artisan key:generate
+
+# Configure database and API keys in .env
 php artisan migrate
 php artisan serve # Runs on localhost:8000
 ```
 
 ### Frontend (Vue 3 + Vite)
 ```bash
+cd frontend
 npm install
+
+# Create .env with API configuration
 npm run dev # Vite dev server on localhost:5173
 npm run build # Production PWA build
 ```
@@ -114,28 +127,100 @@ npm run build # Production PWA build
 ### Environment Variables
 
 **Backend (.env):**
-```
-GEMINI_API_KEY=your_gemini_key
-GOOGLE_MAPS_API_KEY=your_maps_key
+```env
+APP_NAME=EatGemi
+APP_URL=http://localhost:8000
+DB_CONNECTION=mysql
+DB_DATABASE=eatgemi
+DB_USERNAME=your_username
+DB_PASSWORD=your_password
+
+GEMINI_API_KEY=your_gemini_api_key_here
+GOOGLE_MAPS_API_KEY=your_google_maps_api_key_here
 SANCTUM_STATEFUL_DOMAINS=localhost:5173
 ```
 
 **Frontend (.env):**
-```
+```env
 VITE_API_BASE_URL=http://localhost:8000/api
-VITE_GOOGLE_MAPS_API_KEY=same_as_backend_key
+VITE_GOOGLE_MAPS_API_KEY=your_google_maps_api_key_here
+```
+
+### Getting API Keys
+
+1. **Google Gemini API**: Visit [Google AI Studio](https://makersuite.google.com/app/apikey)
+2. **Google Maps API**: Visit [Google Cloud Console](https://console.cloud.google.com/apis/credentials)
+   - Enable: Maps JavaScript API, Places API, Geocoding API
+
+### Production Deployment
+
+**Backend (Laravel):**
+```bash
+composer install --optimize-autoloader --no-dev
+php artisan config:cache
+php artisan route:cache
+php artisan view:cache
+```
+
+**Frontend (PWA):**
+```bash
+npm run build
+# Deploy dist/ folder to static hosting (Netlify, Vercel, etc.)
 ```
 
 ---
 
-## 🧑‍💻 Development Patterns
+## 🧑‍💻 Development Commands
 
-- **Gemini API calls**: Always via backend, never expose keys to frontend
-- **Error handling**: Exponential backoff for rate limits
-- **Prompt structure**: "Suggest 5 restaurants in <<city>> with menu table or image links"
-- **Pinia state**: Auth, restaurants, visited, offline indicator
-- **PWA**: vite-plugin-pwa, Workbox, offline banner, install prompt
-- **Google Maps**: JS API, pins, info windows, offline fallback
+**Backend:**
+```bash
+# Install dependencies
+composer install
+
+# Run tests
+php artisan test
+
+# Start development server
+php artisan serve
+
+# Database operations
+php artisan migrate
+php artisan migrate:fresh --seed
+
+# Code formatting
+./vendor/bin/pint
+
+# Clear caches
+php artisan optimize:clear
+```
+
+**Frontend:**
+```bash
+# Install dependencies
+npm install
+
+# Development server
+npm run dev
+
+# Build for production
+npm run build
+
+# Preview production build
+npm run preview
+
+# Run tests
+npm run test
+
+# Type checking
+npm run type-check
+
+# Lint and format code
+npm run lint
+npm run format
+
+# PWA analysis
+npm run build:analyze
+```
 
 ---
 
