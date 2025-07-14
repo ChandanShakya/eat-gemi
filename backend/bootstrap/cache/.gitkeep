@@ -1,0 +1,2 @@
+# This file ensures the bootstrap/cache directory is preserved in git
+# Laravel uses this directory for various cache files during bootstrap
