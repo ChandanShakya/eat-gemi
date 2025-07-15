@@ -1,7 +1,7 @@
 {
     "name": "eat-gemi/backend",
     "type": "project",
-    "description": "EatGemi AI Restaurant Finder - Laravel API Backend",
+    "description": "MapGemi AI Location Finder - Laravel API Backend",
     "keywords": ["laravel", "framework", "api", "restaurant", "ai", "gemini"],
     "license": "MIT",
     "require": {

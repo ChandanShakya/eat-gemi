@@ -65,15 +65,15 @@ Route::get('health', function () {
 // API documentation info (public)
 Route::get('/', function () {
     return response()->json([
-        'name' => 'EatGemi API',
-        'description' => 'AI-Powered Restaurant Finder API',
+        'name' => 'MapGemi API',
+        'description' => 'AI-Powered Location Finder API',
         'version' => '1.0.0',
         'endpoints' => [
             'POST /api/auth/register' => 'User registration',
             'POST /api/auth/login' => 'User login',
             'POST /api/auth/logout' => 'User logout (authenticated)',
             'GET /api/auth/me' => 'Get current user (authenticated)',
-            'GET /api/recommend?city=...' => 'Get restaurant recommendations (authenticated)',
+            'GET /api/recommend?prompt=...' => 'Get location recommendations (authenticated)',
             'POST /api/recommend/alternatives' => 'Get alternative recommendations (authenticated)',
             'GET /api/visited' => 'Get visited places (authenticated)',
             'POST /api/visited' => 'Mark place as visited (authenticated)',

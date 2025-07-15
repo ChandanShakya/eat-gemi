@@ -3,8 +3,8 @@
     <div class="max-w-md w-full space-y-8">
       <!-- Header -->
       <div class="text-center">
-        <h1 class="text-4xl font-bold text-green-600 mb-2">EatGemi</h1>
-        <p class="text-gray-600">AI-powered restaurant discovery</p>
+        <h1 class="text-4xl font-bold text-green-600 mb-2">MapGemi</h1>
+        <p class="text-gray-600">AI-powered location discovery</p>
       </div>
 
       <!-- Auth Form Card -->
@@ -172,17 +172,17 @@
 
       <!-- Features -->
       <div class="text-center space-y-4">
-        <h3 class="text-lg font-medium text-gray-900">Why EatGemi?</h3>
+        <h3 class="text-lg font-medium text-gray-900">Why MapGemi?</h3>
         <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm">
           <div class="flex flex-col items-center">
             <div class="text-2xl mb-2">🤖</div>
             <div class="font-medium">AI-Powered</div>
-            <div class="text-gray-600">Smart recommendations</div>
+            <div class="text-gray-600">Smart location search</div>
           </div>
           <div class="flex flex-col items-center">
             <div class="text-2xl mb-2">📍</div>
             <div class="font-medium">Location-Based</div>
-            <div class="text-gray-600">Find nearby gems</div>
+            <div class="text-gray-600">Find anything nearby</div>
           </div>
           <div class="flex flex-col items-center">
             <div class="text-2xl mb-2">📱</div>

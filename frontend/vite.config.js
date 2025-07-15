@@ -11,9 +11,9 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'mask-icon.svg'],
       manifest: {
-        name: 'EatGemi - AI Restaurant Finder',
-        short_name: 'EatGemi',
-        description: 'AI-powered restaurant discovery with offline capabilities',
+        name: 'MapGemi - AI Location Finder',
+        short_name: 'MapGemi',
+        description: 'AI-powered location discovery with comprehensive information',
         theme_color: '#10b981',
         background_color: '#ffffff',
         display: 'standalone',

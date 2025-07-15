@@ -5,8 +5,8 @@
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div class="flex justify-between items-center h-16">
           <div class="flex items-center">
-            <h1 class="text-2xl font-bold text-green-600">EatGemi</h1>
-            <p class="ml-3 text-gray-600 hidden sm:block">AI Restaurant Finder</p>
+            <h1 class="text-2xl font-bold text-green-600">MapGemi</h1>
+            <p class="ml-3 text-gray-600 hidden sm:block">AI Location Finder</p>
           </div>
           <div class="flex items-center space-x-4">
             <div class="text-sm text-gray-600">
@@ -27,13 +27,13 @@
       <!-- Search Section -->
       <div class="mb-8">
         <div class="card p-6">
-          <h2 class="text-xl font-semibold text-gray-900 mb-4">Find Restaurants</h2>
+          <h2 class="text-xl font-semibold text-gray-900 mb-4">Find Locations</h2>
           <form @submit.prevent="searchRestaurants" class="flex gap-4">
             <div class="flex-1">
               <input
-                v-model="searchCity"
+                v-model="searchPrompt"
                 type="text"
-                placeholder="Enter city name (e.g., New York, Tokyo, London)"
+                placeholder="Enter what you're looking for (e.g., 'Italian restaurants in Rome', 'coffee shops near me', 'hotels in Paris')"
                 class="input"
                 :disabled="restaurantStore.isLoading"
               />
@@ -58,7 +58,7 @@
               class="btn bg-orange-500 text-white hover:bg-orange-600"
               :disabled="restaurantStore.isLoading"
             >
-              🧪 Test Tokyo
+              🧪 Test Search
             </button>
           </form>
           
@@ -71,10 +71,10 @@
           </div>
 
           <!-- Success Message -->
-          <div v-if="restaurantStore.currentCity && !restaurantStore.isLoading && !restaurantStore.error" 
+          <div v-if="restaurantStore.currentPrompt && !restaurantStore.isLoading && !restaurantStore.error" 
                class="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg">
             <p class="text-green-700 text-sm">
-              ✅ Found {{ restaurantStore.currentRecommendations.length }} restaurants in {{ restaurantStore.currentCity }}!
+              ✅ Found {{ restaurantStore.currentRecommendations.length }} locations for your search!
             </p>
           </div>
         </div>
@@ -82,11 +82,11 @@
 
       <!-- Results Grid -->
       <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <!-- Restaurants List -->
+        <!-- Locations List -->
         <div class="lg:col-span-2">
           <div v-if="restaurantStore.hasRecommendations" class="space-y-4">
             <h3 class="text-lg font-semibold text-gray-900">
-              Restaurants in {{ restaurantStore.currentCity }}
+              Search Results
             </h3>
             <div class="grid gap-4">
               <RestaurantCard
@@ -100,19 +100,19 @@
           
           <!-- Empty State -->
           <div v-else-if="!restaurantStore.isLoading" class="text-center py-12">
-            <div class="text-gray-400 text-6xl mb-4">🍽️</div>
+            <div class="text-gray-400 text-6xl mb-4">🗺️</div>
             <h3 class="text-lg font-medium text-gray-900 mb-2">
-              Ready to find amazing restaurants?
+              Ready to find amazing places?
             </h3>
             <p class="text-gray-600 mb-4">
-              Enter a city name above to get AI-powered restaurant recommendations.
+              Enter what you're looking for above to get AI-powered location recommendations.
             </p>
           </div>
           
           <!-- Loading State -->
           <div v-if="restaurantStore.isLoading" class="text-center py-12">
             <div class="spinner mx-auto mb-4"></div>
-            <p class="text-gray-600">Getting personalized recommendations...</p>
+            <p class="text-gray-600">Finding locations for you...</p>
           </div>
         </div>
 
@@ -157,16 +157,16 @@ const authStore = useAuthStore()
 const restaurantStore = useRestaurantStore()
 
 // Reactive state
-const searchCity = ref('')
+const searchPrompt = ref('')
 
 // Methods
 const searchRestaurants = async () => {
-  if (!searchCity.value || !searchCity.value.trim()) {
-    restaurantStore.error = 'Please enter a city name'
+  if (!searchPrompt.value || !searchPrompt.value.trim()) {
+    restaurantStore.error = 'Please enter what you\'re looking for'
     return
   }
   
-  const result = await restaurantStore.getRecommendations(searchCity.value.trim())
+  const result = await restaurantStore.getRecommendations(searchPrompt.value.trim())
   
   if (!result.success) {
     // Error is already set in the store
@@ -174,7 +174,7 @@ const searchRestaurants = async () => {
 }
 
 const testSearch = async () => {
-  searchCity.value = 'Tokyo'
+  searchPrompt.value = 'Italian restaurants in Rome'
   await searchRestaurants()
 }
 

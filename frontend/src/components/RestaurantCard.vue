@@ -44,59 +44,108 @@
           </span>
         </div>
 
-        <!-- Menu Information -->
-        <div v-if="restaurant.menu_image_url || restaurant.menu_table || restaurant.menu_link" class="space-y-2">
-          <h4 class="font-medium text-gray-900">Menu</h4>
+        <!-- Menu Information - ALWAYS DISPLAYED FOR RESTAURANTS -->
+        <div v-if="isRestaurant" class="space-y-2">
+          <h4 class="font-medium text-gray-900 flex items-center">
+            <span class="mr-2">🍽️</span> Menu
+            <span v-if="restaurant.menu_note" class="ml-2 text-xs text-gray-500">({{ restaurant.menu_note }})</span>
+          </h4>
           
-          <!-- Menu Link from Gemini -->
-          <div v-if="restaurant.menu_link && !restaurant.menu_image_url" class="p-3 bg-gray-50 rounded-lg">
-            <p class="text-sm text-gray-600 mb-2">{{ restaurant.menu_link }}</p>
-            <a v-if="restaurant.menu_link.includes('http')" 
-               :href="restaurant.menu_link" 
-               target="_blank"
-               class="text-blue-600 hover:text-blue-800 underline text-sm">
-              🔗 View Menu
-            </a>
-          </div>
-          
-          <!-- Menu Image -->
-          <div v-if="restaurant.menu_image_url" class="relative">
-            <img 
-              :src="restaurant.menu_image_url" 
-              :alt="`Menu for ${restaurant.name}`"
-              class="w-full h-32 object-cover rounded-lg cursor-pointer"
-              @click="showMenuModal = true"
-              loading="lazy"
-            />
-            <div class="absolute inset-0 bg-black bg-opacity-0 hover:bg-opacity-10 transition-all duration-200 rounded-lg flex items-center justify-center cursor-pointer"
-                 @click="showMenuModal = true">
-              <span class="text-white opacity-0 hover:opacity-100 transition-opacity">
-                🔍 View Full Menu
-              </span>
-            </div>
-          </div>
-
-          <!-- Menu Table -->
-          <div v-if="restaurant.menu_table && restaurant.menu_table.length" class="overflow-x-auto">
+          <!-- Menu Table (Priority 1) -->
+          <div v-if="restaurant.menu_table && restaurant.menu_table.length" class="overflow-x-auto bg-gray-50 rounded-lg p-3">
             <table class="min-w-full text-sm">
-              <thead class="bg-gray-50">
+              <thead class="bg-gray-100">
                 <tr>
                   <th class="px-3 py-2 text-left font-medium text-gray-700">Item</th>
                   <th class="px-3 py-2 text-left font-medium text-gray-700">Price</th>
+                  <th v-if="hasDescriptions" class="px-3 py-2 text-left font-medium text-gray-700">Description</th>
                 </tr>
               </thead>
               <tbody class="divide-y divide-gray-200">
-                <tr v-for="(item, index) in displayMenuItems" :key="index">
-                  <td class="px-3 py-2 text-gray-900">{{ item.name || item.item }}</td>
-                  <td class="px-3 py-2 text-gray-700">{{ item.price }}</td>
+                <tr v-for="(item, index) in displayMenuItems" :key="index" class="hover:bg-gray-50">
+                  <td class="px-3 py-2 text-gray-900 font-medium">{{ item.name || item.item }}</td>
+                  <td class="px-3 py-2 text-green-600 font-semibold">{{ item.price }}</td>
+                  <td v-if="hasDescriptions" class="px-3 py-2 text-gray-600 text-xs">{{ item.description || '-' }}</td>
                 </tr>
               </tbody>
             </table>
             <button v-if="restaurant.menu_table.length > 3" 
                     @click="showFullMenu = !showFullMenu"
-                    class="text-green-600 text-sm mt-2 hover:underline">
-              {{ showFullMenu ? 'Show Less' : `Show ${restaurant.menu_table.length - 3} More Items` }}
+                    class="text-blue-600 text-sm mt-2 hover:underline flex items-center">
+              {{ showFullMenu ? '� Show Less' : `🔽 Show ${restaurant.menu_table.length - 3} More Items` }}
             </button>
+          </div>
+          
+          <!-- Menu Image (Priority 2) -->
+          <div v-else-if="restaurant.menu_image_url" class="relative bg-gray-50 rounded-lg p-3">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-sm text-gray-600">Menu Image</span>
+              <button 
+                @click="openMenuImage"
+                class="text-blue-600 text-sm hover:underline">
+                🔍 View Full Size
+              </button>
+            </div>
+            
+            <!-- Google Photos Search Link -->
+            <div v-if="restaurant.menu_image_url.includes('google.com/search')" 
+                 class="text-center p-4 border-2 border-dashed border-gray-300 rounded">
+              <p class="text-sm text-gray-600 mb-2">📸 Search for menu images</p>
+              <a :href="restaurant.menu_image_url" 
+                 target="_blank"
+                 class="inline-flex items-center px-3 py-2 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 transition-colors">
+                🔍 Search Google Images
+              </a>
+            </div>
+            
+            <!-- Direct Image Link -->
+            <div v-else>
+              <img 
+                :src="restaurant.menu_image_url" 
+                :alt="`Menu for ${restaurant.name}`"
+                class="w-full h-40 object-cover rounded cursor-pointer hover:opacity-90 transition-opacity"
+                @click="showMenuModal = true"
+                @error="handleImageError"
+                loading="lazy"
+              />
+            </div>
+          </div>
+          
+          <!-- Menu Link (Priority 3) -->
+          <div v-else-if="restaurant.menu_link || restaurant.menu_url" class="bg-gray-50 rounded-lg p-3">
+            <div class="flex items-center justify-between">
+              <span class="text-sm text-gray-600">📋 Menu Link</span>
+              <a :href="restaurant.menu_link || restaurant.menu_url" 
+                 target="_blank"
+                 class="text-blue-600 hover:text-blue-800 underline text-sm">
+                🔗 View Menu
+              </a>
+            </div>
+          </div>
+          
+          <!-- Fallback: Google Photos Search (Always available for restaurants) -->
+          <div v-else class="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+            <div class="flex items-center justify-between">
+              <div>
+                <p class="text-sm text-yellow-800 font-medium">📸 Find Menu Images</p>
+                <p class="text-xs text-yellow-600 mt-1">Search Google Photos for menu images</p>
+              </div>
+              <a :href="generateGooglePhotosUrl()" 
+                 target="_blank"
+                 class="px-3 py-1 bg-yellow-600 text-white text-sm rounded hover:bg-yellow-700 transition-colors">
+                Search Images
+              </a>
+            </div>
+          </div>
+        </div>
+
+        <!-- Non-Restaurant Location Info -->
+        <div v-else class="space-y-2">
+          <div v-if="restaurant.features && restaurant.features.length" class="flex flex-wrap gap-1">
+            <span v-for="feature in restaurant.features" :key="feature" 
+                  class="px-2 py-1 bg-purple-100 text-purple-700 text-xs rounded-full">
+              {{ formatFeature(feature) }}
+            </span>
           </div>
         </div>
       </div>
@@ -238,6 +287,19 @@ const displayMenuItems = computed(() => {
     : props.restaurant.menu_table.slice(0, 3)
 })
 
+const isRestaurant = computed(() => {
+  const type = (props.restaurant.type || '').toLowerCase()
+  const foodTypes = ['restaurant', 'cafe', 'bar', 'bistro', 'diner', 'pizzeria', 'bakery', 'food', 'eatery']
+  
+  return foodTypes.some(foodType => type.includes(foodType)) || 
+         (props.restaurant.cuisine || props.restaurant.menu_table || props.restaurant.menu_image_url)
+})
+
+const hasDescriptions = computed(() => {
+  if (!props.restaurant.menu_table) return false
+  return props.restaurant.menu_table.some(item => item.description && item.description.trim() !== '')
+})
+
 // Methods
 const formatType = (type) => {
   return type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())
@@ -247,5 +309,30 @@ const markAsVisited = () => {
   if (!isVisited.value) {
     emit('mark-visited', props.restaurant)
   }
+}
+
+const generateGooglePhotosUrl = () => {
+  const searchQuery = encodeURIComponent(`${props.restaurant.name} menu`)
+  return `https://www.google.com/search?tbm=isch&q=${searchQuery}`
+}
+
+const openMenuImage = () => {
+  if (props.restaurant.menu_image_url) {
+    if (props.restaurant.menu_image_url.includes('google.com/search')) {
+      window.open(props.restaurant.menu_image_url, '_blank')
+    } else {
+      showMenuModal.value = true
+    }
+  }
+}
+
+const handleImageError = (event) => {
+  // Hide broken image and show Google Photos search instead
+  event.target.style.display = 'none'
+  // Could set a reactive flag here to show fallback content
+}
+
+const formatFeature = (feature) => {
+  return feature.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())
 }
 </script>

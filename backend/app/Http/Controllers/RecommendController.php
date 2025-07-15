@@ -10,15 +10,15 @@ use Illuminate\Support\Facades\Log;
 class RecommendController extends Controller
 {
     /**
-     * Get restaurant recommendations using Gemini AI
+     * Get location recommendations using Gemini AI
      */
     public function getRecommendations(Request $request)
     {
         $request->validate([
-            'city' => 'required|string|max:255',
+            'prompt' => 'required|string|max:500',
         ]);
 
-        $city = $request->query('city');
+        $prompt = $request->query('prompt');
         $geminiApiKey = config('services.gemini.api_key');
 
         if (! $geminiApiKey) {
@@ -28,8 +28,39 @@ class RecommendController extends Controller
         }
 
         try {
-            // Construct prompt for Gemini API
-            $prompt = "Suggest 5 restaurants in {$city} with menu table or image links. For each restaurant, provide: name, address, cuisine type, price range, and if possible a menu link or image URL. Format the response as JSON with an array of restaurants.";
+            // Enhanced prompt for comprehensive location search with mandatory menu requirement
+            $searchPrompt = "Based on this request: '{$prompt}', provide 5 relevant locations with detailed information. 
+
+            MANDATORY REQUIREMENTS:
+            - If the location is a restaurant, cafe, or food establishment, you MUST include a menu. Use menu_table for structured data or menu_image_url for image links.
+            - For restaurants without available online menus, search Google Photos/Images and provide estimated menu_image_url links
+            - Include comprehensive location details: name, full address, type/category, price range, description, contact info
+            - Add latitude/longitude coordinates if possible
+            - For non-food locations, provide relevant service details instead of menu
+
+            Format as JSON with this structure:
+            {
+              \"locations\": [
+                {
+                  \"name\": \"Location Name\",
+                  \"address\": \"Full address with city, country\",
+                  \"type\": \"restaurant/cafe/hotel/shop/etc\",
+                  \"price_range\": \"$/$$/$$$/$$$$ or equivalent\",
+                  \"description\": \"Detailed description\",
+                  \"phone\": \"contact number if available\",
+                  \"website\": \"website URL if available\",
+                  \"lat\": \"latitude\",
+                  \"lng\": \"longitude\",
+                  \"menu_table\": [
+                    {\"item\": \"Dish name\", \"price\": \"\$X.XX\", \"description\": \"Brief description\"}
+                  ],
+                  \"menu_image_url\": \"URL to menu image from Google Photos/Images\",
+                  \"rating\": \"X.X/5\",
+                  \"hours\": \"Opening hours\",
+                  \"features\": [\"wifi\", \"outdoor_seating\", \"delivery\", \"etc\"]
+                }
+              ]
+            }";
 
             // Call Gemini API
             $response = Http::withHeaders([
@@ -39,7 +70,7 @@ class RecommendController extends Controller
                     [
                         'parts' => [
                             [
-                                'text' => $prompt,
+                                'text' => $searchPrompt,
                             ],
                         ],
                     ],
@@ -63,56 +94,225 @@ class RecommendController extends Controller
             $generatedText = $data['candidates'][0]['content']['parts'][0]['text'] ?? '';
 
             // Try to parse JSON from the response
-            $restaurants = $this->parseRestaurantsFromResponse($generatedText);
+            $locations = $this->parseLocationsFromResponse($generatedText);
+
+            // Try to parse JSON from the response
+            $locations = $this->parseLocationsFromResponse($generatedText);
 
             return response()->json([
                 'message' => 'Recommendations retrieved successfully',
-                'city' => $city,
-                'restaurants' => $restaurants,
+                'query' => $prompt,
+                'restaurants' => $locations, // Keep 'restaurants' key for frontend compatibility
                 'raw_response' => $generatedText,
             ]);
 
         } catch (\Exception $e) {
             Log::error('Error getting recommendations', [
                 'error' => $e->getMessage(),
-                'city' => $city,
+                'prompt' => $prompt,
             ]);
 
             // Return mock data for development/testing
-            $mockRestaurants = [
-                [
-                    'name' => 'Sushi Zen',
-                    'address' => '123 Main St, ' . $city,
-                    'cuisine' => 'Japanese',
-                    'price_range' => '$$$',
-                    'menu_url' => 'https://example.com/sushi-zen-menu',
-                    'description' => 'Authentic sushi experience with fresh ingredients',
-                ],
-                [
-                    'name' => 'Pasta Palace',
-                    'address' => '456 Food Ave, ' . $city,
-                    'cuisine' => 'Italian',
-                    'price_range' => '$$',
-                    'menu_url' => 'https://example.com/pasta-palace-menu',
-                    'description' => 'Traditional Italian pasta dishes',
-                ],
-                [
-                    'name' => 'Burger Bliss',
-                    'address' => '789 Taste Blvd, ' . $city,
-                    'cuisine' => 'American',
-                    'price_range' => '$',
-                    'menu_url' => 'https://example.com/burger-bliss-menu',
-                    'description' => 'Gourmet burgers and craft beer',
-                ],
-            ];
+            $mockLocations = $this->getMockLocationData($prompt);
 
             return response()->json([
                 'message' => 'Recommendations retrieved successfully (mock data)',
-                'city' => $city,
-                'restaurants' => $mockRestaurants,
+                'query' => $prompt,
+                'restaurants' => $mockLocations, // Keep 'restaurants' key for frontend compatibility
                 'note' => 'Using mock data - Gemini API temporarily unavailable',
             ]);
         }
+    }
+
+    /**
+     * Parse locations from Gemini API response and ensure menus for restaurants
+     */
+    private function parseLocationsFromResponse($responseText)
+    {
+        // Try to extract JSON from the response
+        if (preg_match('/\{.*\}/s', $responseText, $matches)) {
+            $jsonString = $matches[0];
+            
+            try {
+                $data = json_decode($jsonString, true);
+                
+                if (isset($data['locations']) && is_array($data['locations'])) {
+                    $locations = [];
+                    
+                    foreach ($data['locations'] as $location) {
+                        $processedLocation = $this->processLocation($location);
+                        $locations[] = $processedLocation;
+                    }
+                    
+                    return $locations;
+                }
+            } catch (\Exception $e) {
+                Log::error('JSON parsing error', ['error' => $e->getMessage()]);
+            }
+        }
+        
+        // Fallback: parse as text and create structured data
+        return $this->parseTextResponse($responseText);
+    }
+
+    /**
+     * Process individual location and ensure menu for restaurants
+     */
+    private function processLocation($location)
+    {
+        $processedLocation = [
+            'name' => $location['name'] ?? 'Unknown Location',
+            'address' => $location['address'] ?? '',
+            'type' => $location['type'] ?? 'location',
+            'price_range' => $location['price_range'] ?? '',
+            'description' => $location['description'] ?? '',
+            'phone' => $location['phone'] ?? '',
+            'website' => $location['website'] ?? '',
+            'lat' => $location['lat'] ?? null,
+            'lng' => $location['lng'] ?? null,
+            'rating' => $location['rating'] ?? '',
+            'hours' => $location['hours'] ?? '',
+            'features' => $location['features'] ?? [],
+        ];
+
+        // For restaurants, ensure menu is included
+        $isRestaurant = $this->isRestaurantType($location['type'] ?? '');
+        
+        if ($isRestaurant) {
+            // Check if menu data exists
+            $hasMenuTable = isset($location['menu_table']) && !empty($location['menu_table']);
+            $hasMenuImage = isset($location['menu_image_url']) && !empty($location['menu_image_url']);
+            
+            if ($hasMenuTable) {
+                $processedLocation['menu_table'] = $location['menu_table'];
+            }
+            
+            if ($hasMenuImage) {
+                $processedLocation['menu_image_url'] = $location['menu_image_url'];
+            }
+            
+            // If no menu found, try to generate Google Photos search URL
+            if (!$hasMenuTable && !$hasMenuImage) {
+                $processedLocation['menu_image_url'] = $this->generateGooglePhotosMenuUrl($location['name'] ?? '');
+                $processedLocation['menu_note'] = 'Menu image from Google Photos search';
+            }
+        }
+
+        return $processedLocation;
+    }
+
+    /**
+     * Check if location type is restaurant/food related
+     */
+    private function isRestaurantType($type)
+    {
+        $foodTypes = ['restaurant', 'cafe', 'bar', 'bistro', 'diner', 'pizzeria', 'bakery', 'food', 'eatery'];
+        $type = strtolower($type);
+        
+        foreach ($foodTypes as $foodType) {
+            if (strpos($type, $foodType) !== false) {
+                return true;
+            }
+        }
+        
+        return false;
+    }
+
+    /**
+     * Generate Google Photos search URL for restaurant menu
+     */
+    private function generateGooglePhotosMenuUrl($restaurantName)
+    {
+        $searchQuery = urlencode($restaurantName . ' menu');
+        return "https://www.google.com/search?tbm=isch&q={$searchQuery}";
+    }
+
+    /**
+     * Parse text response as fallback
+     */
+    private function parseTextResponse($responseText)
+    {
+        // Simple text parsing - split by lines and create basic structure
+        $lines = explode("\n", $responseText);
+        $locations = [];
+        $currentLocation = null;
+        
+        foreach ($lines as $line) {
+            $line = trim($line);
+            if (empty($line)) continue;
+            
+            // Look for location names (assuming they start with numbers or bullet points)
+            if (preg_match('/^[\d\.\*\-\s]*(.+)/', $line, $matches)) {
+                if ($currentLocation) {
+                    $locations[] = $this->processLocation($currentLocation);
+                }
+                
+                $currentLocation = [
+                    'name' => trim($matches[1]),
+                    'description' => '',
+                    'type' => 'restaurant', // Default assumption
+                ];
+            } elseif ($currentLocation && !empty($line)) {
+                $currentLocation['description'] .= $line . ' ';
+            }
+        }
+        
+        if ($currentLocation) {
+            $locations[] = $this->processLocation($currentLocation);
+        }
+        
+        return $locations;
+    }
+
+    /**
+     * Get mock location data for testing
+     */
+    private function getMockLocationData($prompt)
+    {
+        $mockLocations = [
+            [
+                'name' => 'Sushi Zen Restaurant',
+                'address' => '123 Main Street, Downtown',
+                'type' => 'restaurant',
+                'price_range' => '$$$',
+                'description' => 'Authentic Japanese sushi experience with fresh daily ingredients and traditional preparation methods.',
+                'phone' => '+1-555-0123',
+                'website' => 'https://sushizen.example.com',
+                'lat' => '40.7128',
+                'lng' => '-74.0060',
+                'rating' => '4.5/5',
+                'hours' => 'Mon-Sun: 11:30 AM - 10:00 PM',
+                'features' => ['dine-in', 'takeout', 'delivery', 'sake_bar'],
+                'menu_table' => [
+                    ['item' => 'California Roll', 'price' => '$12.99', 'description' => 'Fresh crab, avocado, cucumber'],
+                    ['item' => 'Salmon Sashimi', 'price' => '$18.99', 'description' => '6 pieces of fresh salmon'],
+                    ['item' => 'Chirashi Bowl', 'price' => '$24.99', 'description' => 'Assorted sashimi over sushi rice']
+                ],
+                'menu_image_url' => 'https://www.google.com/search?tbm=isch&q=sushi+zen+menu'
+            ],
+            [
+                'name' => 'Bella Vista Italiana',
+                'address' => '456 Food Avenue, Little Italy',
+                'type' => 'restaurant',
+                'price_range' => '$$',
+                'description' => 'Traditional Italian cuisine with homemade pasta and wood-fired pizza in a cozy atmosphere.',
+                'phone' => '+1-555-0456',
+                'website' => 'https://bellavista.example.com',
+                'lat' => '40.7589',
+                'lng' => '-73.9851',
+                'rating' => '4.3/5',
+                'hours' => 'Tue-Sun: 5:00 PM - 11:00 PM',
+                'features' => ['outdoor_seating', 'wine_bar', 'romantic'],
+                'menu_table' => [
+                    ['item' => 'Margherita Pizza', 'price' => '$16.99', 'description' => 'Fresh mozzarella, basil, tomato sauce'],
+                    ['item' => 'Fettuccine Alfredo', 'price' => '$19.99', 'description' => 'Homemade pasta with creamy alfredo sauce'],
+                    ['item' => 'Tiramisu', 'price' => '$8.99', 'description' => 'Classic Italian dessert with coffee and mascarpone']
+                ],
+                'menu_image_url' => 'https://www.google.com/search?tbm=isch&q=bella+vista+italiana+menu'
+            ]
+        ];
+
+        return $mockLocations;
     }
 
     /**

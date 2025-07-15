@@ -10,7 +10,7 @@ export const useRestaurantStore = defineStore('restaurants', () => {
   const visitedPlaces = ref([])
   const isLoading = ref(false)
   const error = ref(null)
-  const currentCity = ref('')
+  const currentPrompt = ref('')
   const isOffline = ref(!navigator.onLine)
 
   // Computed
@@ -19,9 +19,9 @@ export const useRestaurantStore = defineStore('restaurants', () => {
   
   // Cache keys for offline storage
   const CACHE_KEYS = {
-    recommendations: 'eatgemi_recommendations',
-    visited: 'eatgemi_visited',
-    city: 'eatgemi_current_city'
+    recommendations: 'mapgemi_recommendations',
+    visited: 'mapgemi_visited',
+    prompt: 'mapgemi_current_prompt'
   }
 
   // Safe localStorage operations
@@ -51,21 +51,21 @@ export const useRestaurantStore = defineStore('restaurants', () => {
   }
 
   // Actions
-  const getRecommendations = async (city) => {
+  const getRecommendations = async (prompt) => {
     isLoading.value = true
     error.value = null
     
     try {
       const response = await axios.get(`${API_BASE_URL}/recommend`, {
-        params: { city }
+        params: { prompt }
       })
       
       currentRecommendations.value = response.data.restaurants || []
-      currentCity.value = city
+      currentPrompt.value = prompt
       
       // Cache for offline use
       safeLocalStorage.setItem(CACHE_KEYS.recommendations, JSON.stringify(currentRecommendations.value))
-      safeLocalStorage.setItem(CACHE_KEYS.city, city)
+      safeLocalStorage.setItem(CACHE_KEYS.prompt, prompt)
       
       return { success: true }
     } catch (err) {
@@ -87,10 +87,12 @@ export const useRestaurantStore = defineStore('restaurants', () => {
   const markAsVisited = async (restaurant) => {
     try {
       const visitData = {
-        place_id: restaurant.place_id,
+        place_id: restaurant.place_id || null,
         name: restaurant.name,
         lat: restaurant.geometry?.location?.lat || restaurant.lat,
         lng: restaurant.geometry?.location?.lng || restaurant.lng,
+        address: restaurant.address || restaurant.vicinity || restaurant.formatted_address || '',
+        type: restaurant.type || 'location',
         menu_image_url: restaurant.menu_image_url || null,
         menu_table: restaurant.menu_table || null,
         visited_at: new Date().toISOString()
@@ -112,7 +114,7 @@ export const useRestaurantStore = defineStore('restaurants', () => {
       safeLocalStorage.setItem(CACHE_KEYS.visited, JSON.stringify(visitedPlaces.value))
       
       // Get alternative recommendations after marking as visited
-      if (currentCity.value && !isOffline.value) {
+      if (currentPrompt.value && !isOffline.value) {
         await getAlternativeRecommendations()
       }
       
@@ -124,14 +126,12 @@ export const useRestaurantStore = defineStore('restaurants', () => {
   }
 
   const getAlternativeRecommendations = async () => {
-    if (!currentCity.value) return
+    if (!currentPrompt.value) return
     
     try {
       const response = await axios.get(`${API_BASE_URL}/recommend`, {
         params: { 
-          city: currentCity.value,
-          alternative: true,
-          visited_places: visitedPlaces.value.map(p => p.place_id).join(',')
+          prompt: `${currentPrompt.value} (show alternatives, avoid these: ${visitedPlaces.value.map(p => p.name).join(', ')})`
         }
       })
       
@@ -139,7 +139,7 @@ export const useRestaurantStore = defineStore('restaurants', () => {
       const newRecommendations = response.data.restaurants || []
       currentRecommendations.value = [
         ...currentRecommendations.value.filter(r => 
-          !visitedPlaces.value.some(v => v.place_id === r.place_id)
+          !visitedPlaces.value.some(v => v.place_id === r.place_id || v.name === r.name)
         ),
         ...newRecommendations
       ]
@@ -197,10 +197,10 @@ export const useRestaurantStore = defineStore('restaurants', () => {
         currentRecommendations.value = JSON.parse(cachedRecommendations)
       }
       
-      // Load city
-      const cachedCity = safeLocalStorage.getItem(CACHE_KEYS.city)
-      if (cachedCity) {
-        currentCity.value = cachedCity
+      // Load prompt
+      const cachedPrompt = safeLocalStorage.getItem(CACHE_KEYS.prompt)
+      if (cachedPrompt) {
+        currentPrompt.value = cachedPrompt
       }
       
       loadVisitedFromCache()
@@ -257,9 +257,9 @@ export const useRestaurantStore = defineStore('restaurants', () => {
 
   const clearRecommendations = () => {
     currentRecommendations.value = []
-    currentCity.value = ''
+    currentPrompt.value = ''
     safeLocalStorage.removeItem(CACHE_KEYS.recommendations)
-    safeLocalStorage.removeItem(CACHE_KEYS.city)
+    safeLocalStorage.removeItem(CACHE_KEYS.prompt)
   }
 
   return {
@@ -268,7 +268,7 @@ export const useRestaurantStore = defineStore('restaurants', () => {
     visitedPlaces,
     isLoading,
     error,
-    currentCity,
+    currentPrompt,
     isOffline,
     
     // Computed

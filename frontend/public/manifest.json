@@ -1,7 +1,7 @@
 {
-  "name": "EatGemi",
-  "short_name": "EatGemi",
-  "description": "AI-powered restaurant discovery with offline capabilities",
+  "name": "MapGemi",
+  "short_name": "MapGemi",
+  "description": "AI-powered location discovery with comprehensive information",
   "theme_color": "#10b981",
   "background_color": "#ffffff",
   "display": "standalone",
