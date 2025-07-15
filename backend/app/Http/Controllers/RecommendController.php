@@ -21,9 +21,9 @@ class RecommendController extends Controller
         $city = $request->query('city');
         $geminiApiKey = config('services.gemini.api_key');
 
-        if (!$geminiApiKey) {
+        if (! $geminiApiKey) {
             return response()->json([
-                'message' => 'Gemini API key not configured'
+                'message' => 'Gemini API key not configured',
             ], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
 
@@ -39,29 +39,29 @@ class RecommendController extends Controller
                     [
                         'parts' => [
                             [
-                                'text' => $prompt
-                            ]
-                        ]
-                    ]
-                ]
+                                'text' => $prompt,
+                            ],
+                        ],
+                    ],
+                ],
             ]);
 
             if ($response->failed()) {
                 Log::error('Gemini API error', [
                     'status' => $response->status(),
-                    'body' => $response->body()
+                    'body' => $response->body(),
                 ]);
 
                 return response()->json([
-                    'message' => 'Failed to get recommendations. Please try again later.'
+                    'message' => 'Failed to get recommendations. Please try again later.',
                 ], Response::HTTP_SERVICE_UNAVAILABLE);
             }
 
             $data = $response->json();
-            
+
             // Extract the generated text
             $generatedText = $data['candidates'][0]['content']['parts'][0]['text'] ?? '';
-            
+
             // Try to parse JSON from the response
             $restaurants = $this->parseRestaurantsFromResponse($generatedText);
 
@@ -69,17 +69,17 @@ class RecommendController extends Controller
                 'message' => 'Recommendations retrieved successfully',
                 'city' => $city,
                 'restaurants' => $restaurants,
-                'raw_response' => $generatedText
+                'raw_response' => $generatedText,
             ]);
 
         } catch (\Exception $e) {
             Log::error('Error getting recommendations', [
                 'error' => $e->getMessage(),
-                'city' => $city
+                'city' => $city,
             ]);
 
             return response()->json([
-                'message' => 'An error occurred while getting recommendations'
+                'message' => 'An error occurred while getting recommendations',
             ], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
     }
@@ -93,7 +93,7 @@ class RecommendController extends Controller
         if (preg_match('/\[.*\]/s', $response, $matches)) {
             $jsonString = $matches[0];
             $restaurants = json_decode($jsonString, true);
-            
+
             if (json_last_error() === JSON_ERROR_NONE && is_array($restaurants)) {
                 return $restaurants;
             }
@@ -106,11 +106,13 @@ class RecommendController extends Controller
 
         foreach ($lines as $line) {
             $line = trim($line);
-            if (empty($line)) continue;
+            if (empty($line)) {
+                continue;
+            }
 
             // Try to identify restaurant entries
             if (preg_match('/^\d+\.?\s*(.+)/', $line, $matches)) {
-                if (!empty($currentRestaurant)) {
+                if (! empty($currentRestaurant)) {
                     $restaurants[] = $currentRestaurant;
                 }
                 $currentRestaurant = [
@@ -118,26 +120,26 @@ class RecommendController extends Controller
                     'address' => '',
                     'cuisine' => '',
                     'price_range' => '',
-                    'menu_url' => ''
+                    'menu_url' => '',
                 ];
-            } elseif (!empty($currentRestaurant)) {
+            } elseif (! empty($currentRestaurant)) {
                 // Try to categorize the line
-                if (strpos(strtolower($line), 'address') !== false || 
+                if (strpos(strtolower($line), 'address') !== false ||
                     strpos(strtolower($line), 'location') !== false) {
                     $currentRestaurant['address'] = $line;
                 } elseif (strpos(strtolower($line), 'cuisine') !== false) {
                     $currentRestaurant['cuisine'] = $line;
-                } elseif (strpos(strtolower($line), 'price') !== false || 
+                } elseif (strpos(strtolower($line), 'price') !== false ||
                          strpos($line, '$') !== false) {
                     $currentRestaurant['price_range'] = $line;
-                } elseif (strpos(strtolower($line), 'menu') !== false || 
+                } elseif (strpos(strtolower($line), 'menu') !== false ||
                          strpos(strtolower($line), 'http') !== false) {
                     $currentRestaurant['menu_url'] = $line;
                 }
             }
         }
 
-        if (!empty($currentRestaurant)) {
+        if (! empty($currentRestaurant)) {
             $restaurants[] = $currentRestaurant;
         }
 
@@ -168,22 +170,22 @@ class RecommendController extends Controller
                     [
                         'parts' => [
                             [
-                                'text' => $prompt
-                            ]
-                        ]
-                    ]
-                ]
+                                'text' => $prompt,
+                            ],
+                        ],
+                    ],
+                ],
             ]);
 
             if ($response->failed()) {
                 return response()->json([
-                    'message' => 'Failed to get alternative recommendations'
+                    'message' => 'Failed to get alternative recommendations',
                 ], Response::HTTP_SERVICE_UNAVAILABLE);
             }
 
             $data = $response->json();
             $generatedText = $data['candidates'][0]['content']['parts'][0]['text'] ?? '';
-            
+
             $alternatives = $this->parseRestaurantsFromResponse($generatedText);
 
             return response()->json([
@@ -191,18 +193,18 @@ class RecommendController extends Controller
                 'visited_place' => $visitedPlace,
                 'city' => $city,
                 'alternatives' => $alternatives,
-                'raw_response' => $generatedText
+                'raw_response' => $generatedText,
             ]);
 
         } catch (\Exception $e) {
             Log::error('Error getting alternatives', [
                 'error' => $e->getMessage(),
                 'visited_place' => $visitedPlace,
-                'city' => $city
+                'city' => $city,
             ]);
 
             return response()->json([
-                'message' => 'An error occurred while getting alternatives'
+                'message' => 'An error occurred while getting alternatives',
             ], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
     }

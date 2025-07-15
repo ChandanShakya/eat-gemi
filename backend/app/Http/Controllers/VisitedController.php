@@ -15,14 +15,14 @@ class VisitedController extends Controller
     public function index(Request $request)
     {
         $user = $request->user();
-        
+
         $visitedPlaces = VisitedPlace::where('user_id', $user->id)
             ->orderBy('visited_at', 'desc')
             ->get();
 
         return response()->json([
             'message' => 'Visited places retrieved successfully',
-            'data' => $visitedPlaces
+            'data' => $visitedPlaces,
         ]);
     }
 
@@ -38,13 +38,13 @@ class VisitedController extends Controller
             'lng' => 'required|numeric|between:-180,180',
             'menu_image_url' => 'nullable|url',
             'menu_table' => 'nullable|array',
-            'visited_at' => 'nullable|date'
+            'visited_at' => 'nullable|date',
         ]);
 
         if ($validator->fails()) {
             return response()->json([
                 'message' => 'Validation failed',
-                'errors' => $validator->errors()
+                'errors' => $validator->errors(),
             ], Response::HTTP_UNPROCESSABLE_ENTITY);
         }
 
@@ -58,7 +58,7 @@ class VisitedController extends Controller
         if ($existingVisit) {
             return response()->json([
                 'message' => 'Place already marked as visited',
-                'data' => $existingVisit
+                'data' => $existingVisit,
             ], Response::HTTP_CONFLICT);
         }
 
@@ -75,7 +75,7 @@ class VisitedController extends Controller
 
         return response()->json([
             'message' => 'Place marked as visited successfully',
-            'data' => $visitedPlace
+            'data' => $visitedPlace,
         ], Response::HTTP_CREATED);
     }
 
@@ -85,20 +85,20 @@ class VisitedController extends Controller
     public function show(Request $request, $id)
     {
         $user = $request->user();
-        
+
         $visitedPlace = VisitedPlace::where('user_id', $user->id)
             ->where('id', $id)
             ->first();
 
-        if (!$visitedPlace) {
+        if (! $visitedPlace) {
             return response()->json([
-                'message' => 'Visited place not found'
+                'message' => 'Visited place not found',
             ], Response::HTTP_NOT_FOUND);
         }
 
         return response()->json([
             'message' => 'Visited place retrieved successfully',
-            'data' => $visitedPlace
+            'data' => $visitedPlace,
         ]);
     }
 
@@ -113,35 +113,35 @@ class VisitedController extends Controller
             'lng' => 'sometimes|required|numeric|between:-180,180',
             'menu_image_url' => 'sometimes|nullable|url',
             'menu_table' => 'sometimes|nullable|array',
-            'visited_at' => 'sometimes|nullable|date'
+            'visited_at' => 'sometimes|nullable|date',
         ]);
 
         if ($validator->fails()) {
             return response()->json([
                 'message' => 'Validation failed',
-                'errors' => $validator->errors()
+                'errors' => $validator->errors(),
             ], Response::HTTP_UNPROCESSABLE_ENTITY);
         }
 
         $user = $request->user();
-        
+
         $visitedPlace = VisitedPlace::where('user_id', $user->id)
             ->where('id', $id)
             ->first();
 
-        if (!$visitedPlace) {
+        if (! $visitedPlace) {
             return response()->json([
-                'message' => 'Visited place not found'
+                'message' => 'Visited place not found',
             ], Response::HTTP_NOT_FOUND);
         }
 
         $visitedPlace->update($request->only([
-            'name', 'lat', 'lng', 'menu_image_url', 'menu_table', 'visited_at'
+            'name', 'lat', 'lng', 'menu_image_url', 'menu_table', 'visited_at',
         ]));
 
         return response()->json([
             'message' => 'Visited place updated successfully',
-            'data' => $visitedPlace->fresh()
+            'data' => $visitedPlace->fresh(),
         ]);
     }
 
@@ -151,21 +151,21 @@ class VisitedController extends Controller
     public function destroy(Request $request, $id)
     {
         $user = $request->user();
-        
+
         $visitedPlace = VisitedPlace::where('user_id', $user->id)
             ->where('id', $id)
             ->first();
 
-        if (!$visitedPlace) {
+        if (! $visitedPlace) {
             return response()->json([
-                'message' => 'Visited place not found'
+                'message' => 'Visited place not found',
             ], Response::HTTP_NOT_FOUND);
         }
 
         $visitedPlace->delete();
 
         return response()->json([
-            'message' => 'Visited place removed successfully'
+            'message' => 'Visited place removed successfully',
         ]);
     }
 
@@ -177,13 +177,13 @@ class VisitedController extends Controller
         $validator = Validator::make($request->all(), [
             'lat' => 'required|numeric|between:-90,90',
             'lng' => 'required|numeric|between:-180,180',
-            'radius' => 'nullable|numeric|min:0.1|max:100' // radius in km
+            'radius' => 'nullable|numeric|min:0.1|max:100', // radius in km
         ]);
 
         if ($validator->fails()) {
             return response()->json([
                 'message' => 'Validation failed',
-                'errors' => $validator->errors()
+                'errors' => $validator->errors(),
             ], Response::HTTP_UNPROCESSABLE_ENTITY);
         }
 
@@ -194,14 +194,14 @@ class VisitedController extends Controller
 
         // Use Haversine formula to find nearby places
         $visitedPlaces = VisitedPlace::where('user_id', $user->id)
-            ->selectRaw("
+            ->selectRaw('
                 *,
                 (6371 * acos(cos(radians(?)) 
                 * cos(radians(lat)) 
                 * cos(radians(lng) - radians(?)) 
                 + sin(radians(?)) 
                 * sin(radians(lat)))) AS distance
-            ", [$lat, $lng, $lat])
+            ', [$lat, $lng, $lat])
             ->having('distance', '<', $radius)
             ->orderBy('distance', 'asc')
             ->get();
@@ -210,7 +210,7 @@ class VisitedController extends Controller
             'message' => 'Nearby visited places retrieved successfully',
             'data' => $visitedPlaces,
             'center' => ['lat' => $lat, 'lng' => $lng],
-            'radius_km' => $radius
+            'radius_km' => $radius,
         ]);
     }
 }

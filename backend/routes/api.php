@@ -1,10 +1,10 @@
 <?php
 
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\RecommendController;
 use App\Http\Controllers\VisitedController;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Route;
 
 /*
 |--------------------------------------------------------------------------
@@ -21,7 +21,7 @@ use App\Http\Controllers\VisitedController;
 Route::prefix('auth')->group(function () {
     Route::post('register', [AuthController::class, 'register']);
     Route::post('login', [AuthController::class, 'login']);
-    
+
     Route::middleware('auth:sanctum')->group(function () {
         Route::post('logout', [AuthController::class, 'logout']);
         Route::get('me', [AuthController::class, 'me']);
@@ -30,13 +30,13 @@ Route::prefix('auth')->group(function () {
 
 // Protected routes (require authentication)
 Route::middleware('auth:sanctum')->group(function () {
-    
+
     // Restaurant recommendations
     Route::prefix('recommend')->group(function () {
         Route::get('/', [RecommendController::class, 'getRecommendations']);
         Route::post('alternatives', [RecommendController::class, 'getAlternatives']);
     });
-    
+
     // Visited places management
     Route::prefix('visited')->group(function () {
         Route::get('/', [VisitedController::class, 'index']);
@@ -46,7 +46,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::delete('{id}', [VisitedController::class, 'destroy']);
         Route::get('nearby/search', [VisitedController::class, 'nearby']);
     });
-    
+
     // User profile
     Route::get('user', function (Request $request) {
         return $request->user();
@@ -58,7 +58,7 @@ Route::get('health', function () {
     return response()->json([
         'status' => 'ok',
         'timestamp' => now(),
-        'version' => '1.0.0'
+        'version' => '1.0.0',
     ]);
 });
 
@@ -82,6 +82,6 @@ Route::get('/', function () {
             'DELETE /api/visited/{id}' => 'Remove visited place (authenticated)',
             'GET /api/visited/nearby/search' => 'Find nearby visited places (authenticated)',
             'GET /api/health' => 'Health check',
-        ]
+        ],
     ]);
 });

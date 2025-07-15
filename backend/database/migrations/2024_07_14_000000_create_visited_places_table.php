@@ -25,7 +25,7 @@ return new class extends Migration
 
             // Composite index for user and place
             $table->unique(['user_id', 'place_id']);
-            
+
             // Spatial index for location-based queries
             $table->index(['lat', 'lng']);
         });
