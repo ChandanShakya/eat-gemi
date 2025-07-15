@@ -4,15 +4,49 @@ import axios from 'axios'
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL
 
+// Safe localStorage operations
+const safeLocalStorage = {
+  getItem: (key) => {
+    try {
+      return localStorage.getItem(key)
+    } catch (error) {
+      console.warn('Failed to read from localStorage:', error.message)
+      return null
+    }
+  },
+  setItem: (key, value) => {
+    try {
+      localStorage.setItem(key, value)
+    } catch (error) {
+      console.warn('Failed to save to localStorage:', error.message)
+    }
+  },
+  removeItem: (key) => {
+    try {
+      localStorage.removeItem(key)
+    } catch (error) {
+      console.warn('Failed to remove from localStorage:', error.message)
+    }
+  }
+}
+
 export const useAuthStore = defineStore('auth', () => {
   // State
   const user = ref(null)
-  const token = ref(localStorage.getItem('auth_token'))
+  const token = ref(safeLocalStorage.getItem('auth_token'))
   const isLoading = ref(false)
   const error = ref(null)
+  const isInitialized = ref(false)
 
   // Computed
-  const isAuthenticated = computed(() => !!token.value && !!user.value)
+  const isAuthenticated = computed(() => {
+    // During initialization, if we have a token, consider user authenticated
+    // until we verify the token is invalid
+    if (!isInitialized.value && token.value) {
+      return true
+    }
+    return !!token.value && !!user.value
+  })
 
   // Configure axios defaults
   if (token.value) {
@@ -25,11 +59,14 @@ export const useAuthStore = defineStore('auth', () => {
       try {
         // Verify token is still valid by fetching user data
         const response = await axios.get(`${API_BASE_URL}/user`)
-        user.value = response.data
+        user.value = response.data.user || response.data
+        isInitialized.value = true
       } catch {
         // Token is invalid, clear it
         logout()
       }
+    } else {
+      isInitialized.value = true
     }
   }
 
@@ -43,9 +80,10 @@ export const useAuthStore = defineStore('auth', () => {
       
       user.value = userData
       token.value = authToken
+      isInitialized.value = true
       
       // Store token in localStorage
-      localStorage.setItem('auth_token', authToken)
+      safeLocalStorage.setItem('auth_token', authToken)
       
       // Set default authorization header
       axios.defaults.headers.common['Authorization'] = `Bearer ${authToken}`
@@ -69,9 +107,10 @@ export const useAuthStore = defineStore('auth', () => {
       
       user.value = newUser
       token.value = authToken
+      isInitialized.value = true
       
       // Store token in localStorage
-      localStorage.setItem('auth_token', authToken)
+      safeLocalStorage.setItem('auth_token', authToken)
       
       // Set default authorization header
       axios.defaults.headers.common['Authorization'] = `Bearer ${authToken}`
@@ -97,9 +136,10 @@ export const useAuthStore = defineStore('auth', () => {
       // Clear local state regardless of API call success
       user.value = null
       token.value = null
+      isInitialized.value = true
       
       // Clear localStorage
-      localStorage.removeItem('auth_token')
+      safeLocalStorage.removeItem('auth_token')
       
       // Remove authorization header
       delete axios.defaults.headers.common['Authorization']
@@ -116,6 +156,7 @@ export const useAuthStore = defineStore('auth', () => {
     token,
     isLoading,
     error,
+    isInitialized,
     
     // Computed
     isAuthenticated,

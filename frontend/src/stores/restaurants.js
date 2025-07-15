@@ -24,6 +24,32 @@ export const useRestaurantStore = defineStore('restaurants', () => {
     city: 'eatgemi_current_city'
   }
 
+  // Safe localStorage operations
+  const safeLocalStorage = {
+    setItem: (key, value) => {
+      try {
+        localStorage.setItem(key, value)
+      } catch (error) {
+        console.warn('Failed to save to localStorage:', error.message)
+      }
+    },
+    getItem: (key) => {
+      try {
+        return localStorage.getItem(key)
+      } catch (error) {
+        console.warn('Failed to read from localStorage:', error.message)
+        return null
+      }
+    },
+    removeItem: (key) => {
+      try {
+        localStorage.removeItem(key)
+      } catch (error) {
+        console.warn('Failed to remove from localStorage:', error.message)
+      }
+    }
+  }
+
   // Actions
   const getRecommendations = async (city) => {
     isLoading.value = true
@@ -38,12 +64,14 @@ export const useRestaurantStore = defineStore('restaurants', () => {
       currentCity.value = city
       
       // Cache for offline use
-      localStorage.setItem(CACHE_KEYS.recommendations, JSON.stringify(currentRecommendations.value))
-      localStorage.setItem(CACHE_KEYS.city, city)
+      safeLocalStorage.setItem(CACHE_KEYS.recommendations, JSON.stringify(currentRecommendations.value))
+      safeLocalStorage.setItem(CACHE_KEYS.city, city)
       
       return { success: true }
     } catch (err) {
-      error.value = err.response?.data?.message || 'Failed to get recommendations'
+      console.error('API Error:', err.response?.data || err.message)
+      
+      error.value = err.response?.data?.message || 'Failed to get recommendations. Please try again.'
       
       // Try to load from cache if offline
       if (!navigator.onLine) {
@@ -81,7 +109,7 @@ export const useRestaurantStore = defineStore('restaurants', () => {
       }
       
       // Update cache
-      localStorage.setItem(CACHE_KEYS.visited, JSON.stringify(visitedPlaces.value))
+      safeLocalStorage.setItem(CACHE_KEYS.visited, JSON.stringify(visitedPlaces.value))
       
       // Get alternative recommendations after marking as visited
       if (currentCity.value && !isOffline.value) {
@@ -117,7 +145,7 @@ export const useRestaurantStore = defineStore('restaurants', () => {
       ]
       
       // Update cache
-      localStorage.setItem(CACHE_KEYS.recommendations, JSON.stringify(currentRecommendations.value))
+      safeLocalStorage.setItem(CACHE_KEYS.recommendations, JSON.stringify(currentRecommendations.value))
       
     } catch {
       // Failed to get alternative recommendations
@@ -132,10 +160,10 @@ export const useRestaurantStore = defineStore('restaurants', () => {
     
     try {
       const response = await axios.get(`${API_BASE_URL}/visited`)
-      visitedPlaces.value = response.data || []
+      visitedPlaces.value = response.data.data || []
       
       // Update cache
-      localStorage.setItem(CACHE_KEYS.visited, JSON.stringify(visitedPlaces.value))
+      safeLocalStorage.setItem(CACHE_KEYS.visited, JSON.stringify(visitedPlaces.value))
     } catch (err) {
       error.value = err.response?.data?.message || 'Failed to load visited places'
       loadVisitedFromCache()
@@ -152,7 +180,7 @@ export const useRestaurantStore = defineStore('restaurants', () => {
       visitedPlaces.value = visitedPlaces.value.filter(place => place.id !== visitedId)
       
       // Update cache
-      localStorage.setItem(CACHE_KEYS.visited, JSON.stringify(visitedPlaces.value))
+      safeLocalStorage.setItem(CACHE_KEYS.visited, JSON.stringify(visitedPlaces.value))
       
       return { success: true }
     } catch (err) {
@@ -164,31 +192,31 @@ export const useRestaurantStore = defineStore('restaurants', () => {
   const loadFromCache = () => {
     try {
       // Load recommendations
-      const cachedRecommendations = localStorage.getItem(CACHE_KEYS.recommendations)
+      const cachedRecommendations = safeLocalStorage.getItem(CACHE_KEYS.recommendations)
       if (cachedRecommendations) {
         currentRecommendations.value = JSON.parse(cachedRecommendations)
       }
       
       // Load city
-      const cachedCity = localStorage.getItem(CACHE_KEYS.city)
+      const cachedCity = safeLocalStorage.getItem(CACHE_KEYS.city)
       if (cachedCity) {
         currentCity.value = cachedCity
       }
       
       loadVisitedFromCache()
-    } catch {
-      // Failed to load from cache
+    } catch (error) {
+      console.warn('Failed to load from cache:', error.message)
     }
   }
 
   const loadVisitedFromCache = () => {
     try {
-      const cachedVisited = localStorage.getItem(CACHE_KEYS.visited)
+      const cachedVisited = safeLocalStorage.getItem(CACHE_KEYS.visited)
       if (cachedVisited) {
         visitedPlaces.value = JSON.parse(cachedVisited)
       }
-    } catch {
-      // Failed to load visited places from cache
+    } catch (error) {
+      console.warn('Failed to load visited places from cache:', error.message)
     }
   }
 
@@ -211,7 +239,7 @@ export const useRestaurantStore = defineStore('restaurants', () => {
     }
     
     // Update cache
-    localStorage.setItem(CACHE_KEYS.visited, JSON.stringify(visitedPlaces.value))
+    safeLocalStorage.setItem(CACHE_KEYS.visited, JSON.stringify(visitedPlaces.value))
   }
 
   const updateOfflineStatus = (online) => {
@@ -230,8 +258,8 @@ export const useRestaurantStore = defineStore('restaurants', () => {
   const clearRecommendations = () => {
     currentRecommendations.value = []
     currentCity.value = ''
-    localStorage.removeItem(CACHE_KEYS.recommendations)
-    localStorage.removeItem(CACHE_KEYS.city)
+    safeLocalStorage.removeItem(CACHE_KEYS.recommendations)
+    safeLocalStorage.removeItem(CACHE_KEYS.city)
   }
 
   return {

@@ -34,6 +34,7 @@
 
 <script setup>
 import { ref, onMounted, onUnmounted, watch, nextTick } from 'vue'
+import { Loader } from '@googlemaps/js-api-loader'
 
 // Props
 const props = defineProps({
@@ -75,20 +76,24 @@ const loadGoogleMapsScript = () => {
       return
     }
 
-    const script = document.createElement('script')
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${GOOGLE_MAPS_API_KEY}&libraries=places`
-    script.async = true
-    script.defer = true
-    
-    script.onload = () => {
-      resolve(window.google.maps)
+    if (!GOOGLE_MAPS_API_KEY) {
+      reject(new Error('Google Maps API key not configured'))
+      return
     }
-    
-    script.onerror = () => {
-      reject(new Error('Failed to load Google Maps'))
-    }
-    
-    document.head.appendChild(script)
+
+    const loader = new Loader({
+      apiKey: GOOGLE_MAPS_API_KEY,
+      version: 'weekly',
+      libraries: ['places']
+    })
+
+    loader.load()
+      .then((google) => {
+        resolve(google.maps)
+      })
+      .catch((error) => {
+        reject(new Error(`Failed to load Google Maps: ${error.message}`))
+      })
   })
 }
 
@@ -171,7 +176,8 @@ const updateMarkers = () => {
   })
 
   // Add visited places markers (if not already shown as restaurants)
-  props.visitedPlaces.forEach(place => {
+  const visitedPlacesArray = Array.isArray(props.visitedPlaces) ? props.visitedPlaces : []
+  visitedPlacesArray.forEach(place => {
     const isInRestaurants = props.restaurants.some(r => r.place_id === place.place_id)
     if (isInRestaurants) return
 
@@ -284,10 +290,23 @@ const updateNetworkStatus = () => {
 }
 
 // Global function for info window buttons
-window.markRestaurantAsVisited = (placeId) => {
-  const restaurant = props.restaurants.find(r => r.place_id === placeId)
-  if (restaurant) {
-    emit('mark-visited', restaurant)
+const setupGlobalFunction = () => {
+  // Clean up any existing function
+  if (window.markRestaurantAsVisited) {
+    delete window.markRestaurantAsVisited
+  }
+  
+  window.markRestaurantAsVisited = (placeId) => {
+    try {
+      const restaurant = props.restaurants.find(r => r.place_id === placeId)
+      if (restaurant) {
+        emit('mark-visited', restaurant)
+      } else {
+        console.warn('Restaurant not found for place_id:', placeId)
+      }
+    } catch (error) {
+      console.error('Error marking restaurant as visited:', error)
+    }
   }
 }
 
@@ -310,6 +329,9 @@ watch(() => props.visitedPlaces, () => {
 
 // Lifecycle
 onMounted(() => {
+  // Setup global function for info window buttons
+  setupGlobalFunction()
+  
   // Monitor network status
   window.addEventListener('online', updateNetworkStatus)
   window.addEventListener('offline', updateNetworkStatus)
@@ -327,6 +349,8 @@ onUnmounted(() => {
   window.removeEventListener('offline', updateNetworkStatus)
   
   // Clean up global function
-  delete window.markRestaurantAsVisited
+  if (window.markRestaurantAsVisited) {
+    delete window.markRestaurantAsVisited
+  }
 })
 </script>

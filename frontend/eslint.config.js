@@ -34,9 +34,12 @@ export default [
   {
     ignores: [
       'dist/',
+      'dev-dist/',
       'node_modules/',
       'public/',
-      '*.d.ts'
+      '*.d.ts',
+      '**/sw.js',
+      '**/workbox-*.js'
     ]
   }
 ]

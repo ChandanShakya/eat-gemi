@@ -24,8 +24,13 @@ const router = createRouter({
 })
 
 // Navigation guards
-router.beforeEach((to, from, next) => {
+router.beforeEach(async (to, from, next) => {
   const authStore = useAuthStore()
+  
+  // Wait for auth initialization if not already initialized
+  if (!authStore.isInitialized) {
+    await authStore.initializeAuth()
+  }
   
   if (to.meta.requiresAuth && !authStore.isAuthenticated) {
     next('/auth')

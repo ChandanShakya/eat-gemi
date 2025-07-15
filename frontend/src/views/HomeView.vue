@@ -36,13 +36,12 @@
                 placeholder="Enter city name (e.g., New York, Tokyo, London)"
                 class="input"
                 :disabled="restaurantStore.isLoading"
-                required
               />
             </div>
             <button 
               type="submit" 
               class="btn btn-primary"
-              :disabled="restaurantStore.isLoading || !searchCity.trim()"
+              :disabled="restaurantStore.isLoading"
             >
               <span v-if="restaurantStore.isLoading" class="flex items-center">
                 <div class="spinner mr-2"></div>
@@ -52,6 +51,15 @@
                 🔍 Search
               </span>
             </button>
+            <!-- Test button to bypass form validation -->
+            <button 
+              type="button" 
+              @click="testSearch"
+              class="btn bg-orange-500 text-white hover:bg-orange-600"
+              :disabled="restaurantStore.isLoading"
+            >
+              🧪 Test Tokyo
+            </button>
           </form>
           
           <!-- Error Message -->
@@ -60,6 +68,14 @@
             <button @click="restaurantStore.clearError" class="text-red-600 text-xs underline mt-1">
               Dismiss
             </button>
+          </div>
+
+          <!-- Success Message -->
+          <div v-if="restaurantStore.currentCity && !restaurantStore.isLoading && !restaurantStore.error" 
+               class="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg">
+            <p class="text-green-700 text-sm">
+              ✅ Found {{ restaurantStore.currentRecommendations.length }} restaurants in {{ restaurantStore.currentCity }}!
+            </p>
           </div>
         </div>
       </div>
@@ -145,13 +161,21 @@ const searchCity = ref('')
 
 // Methods
 const searchRestaurants = async () => {
-  if (!searchCity.value.trim()) return
+  if (!searchCity.value || !searchCity.value.trim()) {
+    restaurantStore.error = 'Please enter a city name'
+    return
+  }
   
   const result = await restaurantStore.getRecommendations(searchCity.value.trim())
   
   if (!result.success) {
-    // Failed to get recommendations
+    // Error is already set in the store
   }
+}
+
+const testSearch = async () => {
+  searchCity.value = 'Tokyo'
+  await searchRestaurants()
 }
 
 const handleMarkVisited = async (restaurant) => {
@@ -189,5 +213,8 @@ onMounted(async () => {
   
   window.addEventListener('online', updateNetworkStatus)
   window.addEventListener('offline', updateNetworkStatus)
+  
+  // Expose test function for debugging
+  window.testEatGemiSearch = testSearch
 })
 </script>

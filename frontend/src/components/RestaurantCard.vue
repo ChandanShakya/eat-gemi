@@ -5,9 +5,9 @@
       <div class="flex justify-between items-start">
         <div class="flex-1">
           <h3 class="font-semibold text-gray-900 text-lg">{{ restaurant.name }}</h3>
-          <p v-if="restaurant.vicinity || restaurant.formatted_address" 
+          <p v-if="restaurant.address || restaurant.vicinity || restaurant.formatted_address" 
              class="text-sm text-gray-600 mt-1">
-            {{ restaurant.vicinity || restaurant.formatted_address }}
+            {{ restaurant.address || restaurant.vicinity || restaurant.formatted_address }}
           </p>
         </div>
         <div class="flex items-center space-x-2 ml-4">
@@ -17,8 +17,8 @@
             <span class="text-sm font-medium">{{ restaurant.rating }}</span>
           </div>
           <!-- Price Level -->
-          <div v-if="restaurant.price_level" class="text-sm text-gray-600">
-            {{ '$'.repeat(restaurant.price_level) }}
+          <div v-if="restaurant.price_level || restaurant.price_range" class="text-sm text-gray-600">
+            {{ restaurant.price_range || '$'.repeat(restaurant.price_level) }}
           </div>
         </div>
       </div>
@@ -26,7 +26,11 @@
       <!-- Restaurant Details -->
       <div class="space-y-2">
         <!-- Cuisine Type -->
-        <div v-if="restaurant.types && restaurant.types.length" class="flex flex-wrap gap-1">
+        <div v-if="restaurant.cuisine || (restaurant.types && restaurant.types.length)" class="flex flex-wrap gap-1">
+          <span v-if="restaurant.cuisine" 
+                class="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded-full">
+            {{ restaurant.cuisine }}
+          </span>
           <span v-for="type in displayTypes" :key="type" 
                 class="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded-full">
             {{ formatType(type) }}
@@ -41,8 +45,19 @@
         </div>
 
         <!-- Menu Information -->
-        <div v-if="restaurant.menu_image_url || restaurant.menu_table" class="space-y-2">
+        <div v-if="restaurant.menu_image_url || restaurant.menu_table || restaurant.menu_link" class="space-y-2">
           <h4 class="font-medium text-gray-900">Menu</h4>
+          
+          <!-- Menu Link from Gemini -->
+          <div v-if="restaurant.menu_link && !restaurant.menu_image_url" class="p-3 bg-gray-50 rounded-lg">
+            <p class="text-sm text-gray-600 mb-2">{{ restaurant.menu_link }}</p>
+            <a v-if="restaurant.menu_link.includes('http')" 
+               :href="restaurant.menu_link" 
+               target="_blank"
+               class="text-blue-600 hover:text-blue-800 underline text-sm">
+              🔗 View Menu
+            </a>
+          </div>
           
           <!-- Menu Image -->
           <div v-if="restaurant.menu_image_url" class="relative">
@@ -172,16 +187,35 @@ const showFullMenu = ref(false)
 
 // Computed
 const isVisited = computed(() => {
-  return restaurantStore.visitedPlaces.some(
-    place => place.place_id === props.restaurant.place_id
-  )
+  const visitedPlacesArray = Array.isArray(restaurantStore.visitedPlaces) ? restaurantStore.visitedPlaces : []
+  
+  if (props.restaurant.place_id) {
+    return visitedPlacesArray.some(
+      place => place.place_id === props.restaurant.place_id
+    )
+  }
+  // For restaurants without place_id (from Gemini), compare by name and address
+  return visitedPlacesArray.some(place => {
+    const restaurantAddress = props.restaurant.address || props.restaurant.vicinity || ''
+    const placeAddress = place.address || ''
+    
+    // Safe string comparison
+    if (!restaurantAddress || !placeAddress) {
+      return place.name === props.restaurant.name
+    }
+    
+    const restaurantAddressPart = restaurantAddress.split(',')[0] || restaurantAddress
+    return place.name === props.restaurant.name && 
+           placeAddress.toLowerCase().includes(restaurantAddressPart.toLowerCase())
+  })
 })
 
 const googleMapsUrl = computed(() => {
   if (props.restaurant.place_id) {
     return `https://www.google.com/maps/place/?q=place_id:${props.restaurant.place_id}`
   }
-  const query = encodeURIComponent(`${props.restaurant.name} ${props.restaurant.vicinity || ''}`)
+  const address = props.restaurant.address || props.restaurant.vicinity || ''
+  const query = encodeURIComponent(`${props.restaurant.name} ${address}`)
   return `https://www.google.com/maps/search/${query}`
 })
 
