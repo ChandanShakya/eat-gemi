@@ -44,8 +44,7 @@ let deferredPrompt = null
 const installPWA = async () => {
   if (deferredPrompt) {
     deferredPrompt.prompt()
-    const { outcome } = await deferredPrompt.userChoice
-    console.log(`User response to the install prompt: ${outcome}`)
+    await deferredPrompt.userChoice
     deferredPrompt = null
     showInstallPrompt.value = false
   }
@@ -82,7 +81,6 @@ onMounted(() => {
 
   // PWA installed event
   window.addEventListener('appinstalled', () => {
-    console.log('PWA was installed')
     showInstallPrompt.value = false
   })
 })

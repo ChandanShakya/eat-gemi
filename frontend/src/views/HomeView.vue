@@ -150,7 +150,7 @@ const searchRestaurants = async () => {
   const result = await restaurantStore.getRecommendations(searchCity.value.trim())
   
   if (!result.success) {
-    console.error('Failed to get recommendations:', result.error)
+    // Failed to get recommendations
   }
 }
 
@@ -159,9 +159,8 @@ const handleMarkVisited = async (restaurant) => {
   
   if (result.success) {
     // Show success feedback (could add toast notification here)
-    console.log('Restaurant marked as visited:', restaurant.name)
   } else {
-    console.error('Failed to mark as visited:', result.error)
+    // Failed to mark as visited
   }
 }
 
@@ -169,9 +168,9 @@ const handleRemoveVisited = async (visitedId) => {
   const result = await restaurantStore.removeFromVisited(visitedId)
   
   if (result.success) {
-    console.log('Removed from visited places')
+    // Removed from visited places
   } else {
-    console.error('Failed to remove from visited:', result.error)
+    // Failed to remove from visited
   }
 }
 

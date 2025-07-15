@@ -119,8 +119,8 @@ export const useRestaurantStore = defineStore('restaurants', () => {
       // Update cache
       localStorage.setItem(CACHE_KEYS.recommendations, JSON.stringify(currentRecommendations.value))
       
-    } catch (err) {
-      console.warn('Failed to get alternative recommendations:', err)
+    } catch {
+      // Failed to get alternative recommendations
     }
   }
 
@@ -176,8 +176,8 @@ export const useRestaurantStore = defineStore('restaurants', () => {
       }
       
       loadVisitedFromCache()
-    } catch (err) {
-      console.warn('Failed to load from cache:', err)
+    } catch {
+      // Failed to load from cache
     }
   }
 
@@ -187,8 +187,8 @@ export const useRestaurantStore = defineStore('restaurants', () => {
       if (cachedVisited) {
         visitedPlaces.value = JSON.parse(cachedVisited)
       }
-    } catch (err) {
-      console.warn('Failed to load visited places from cache:', err)
+    } catch {
+      // Failed to load visited places from cache
     }
   }
 
@@ -205,8 +205,8 @@ export const useRestaurantStore = defineStore('restaurants', () => {
         if (index !== -1) {
           visitedPlaces.value[index] = { ...response.data, synced: true }
         }
-      } catch (err) {
-        console.warn('Failed to sync visited place:', place.name, err)
+      } catch {
+        // Failed to sync visited place
       }
     }
     

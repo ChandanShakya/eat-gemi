@@ -26,7 +26,7 @@ export const useAuthStore = defineStore('auth', () => {
         // Verify token is still valid by fetching user data
         const response = await axios.get(`${API_BASE_URL}/user`)
         user.value = response.data
-      } catch (err) {
+      } catch {
         // Token is invalid, clear it
         logout()
       }
@@ -91,6 +91,7 @@ export const useAuthStore = defineStore('auth', () => {
         await axios.post(`${API_BASE_URL}/auth/logout`)
       }
     } catch (err) {
+      // eslint-disable-next-line no-console
       console.warn('Logout API call failed:', err)
     } finally {
       // Clear local state regardless of API call success

@@ -121,7 +121,6 @@ const initializeMap = async () => {
     updateMarkers()
     
   } catch (err) {
-    console.error('Failed to initialize map:', err)
     error.value = err.message
   } finally {
     isLoading.value = false
@@ -206,7 +205,7 @@ const updateMarkers = () => {
     map.value.fitBounds(bounds)
     
     // Ensure minimum zoom level
-    const listener = window.google.maps.event.addListenerOnce(map.value, 'bounds_changed', () => {
+    window.google.maps.event.addListenerOnce(map.value, 'bounds_changed', () => {
       if (map.value.getZoom() > 15) {
         map.value.setZoom(15)
       }

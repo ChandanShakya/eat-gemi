@@ -47,7 +47,7 @@ export default defineConfig({
       workbox: {
         runtimeCaching: [
           {
-            urlPattern: /^https:\/\/api\./.*/i,
+            urlPattern: /^https:\/\/api\./,
             handler: 'NetworkFirst',
             options: {
               cacheName: 'api-cache',
@@ -58,7 +58,7 @@ export default defineConfig({
             }
           },
           {
-            urlPattern: /^https:\/\/maps\.googleapis\.com/.*/i,
+            urlPattern: /^https:\/\/maps\.googleapis\.com/,
             handler: 'StaleWhileRevalidate',
             options: {
               cacheName: 'google-maps-cache'
